@@ -170,6 +170,8 @@ jobs:
 
       - name: Set all environments for the application
         env:
+          DOCKERHUB_TOKEN: ${{secrets.DOCKERHUB_TOKEN}}
+          DOCKERHUB_USERNAME: ${{secrets.DOCKERHUB_USERNAME}}
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_PORT: ${{ secrets.SERVER_PORT }}
           SERVER_USERNAME: ${{ secrets.SERVER_USERNAME }}
