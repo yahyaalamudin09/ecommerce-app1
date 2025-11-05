@@ -7,9 +7,9 @@ on:
 
 env:
   IMAGE_TAG: ${{ github.run_number }}
-  CONTAINER_NAME: ecommerce
+  CONTAINER_NAME: movie-service
   REGISTRY: docker.io
-  IMAGE_NAME: ${{ github.actor }}/ecommerce:$IMAGE_TAG
+  IMAGE_NAME: ${{ github.actor }}/movie-service:$IMAGE_TAG
   ECR_REPOSITORY: ${{ vars.AWS_ECR_REPO }}
   AWS_ECR_REGISTRY: ${{ vars.AWS_ECR_REGISTRY }}
 
@@ -49,10 +49,6 @@ jobs:
       - name: Build jar file
         run: mvn clean -B package --file pom.xml
 
-      # Optional: Uploads the full dependency graph to GitHub to improve the quality of Dependabot alerts this repository can receive
-      #- name: Update dependency graph
-       # uses: advanced-security/maven-dependency-submission-action@b275d12641ac2d2108b2cbb7598b154ad2f2cee8
-
   push-to-docker-hub:
     runs-on: ubuntu-latest
     needs:
@@ -79,10 +75,10 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile
+          file: Dockerfile-github
           push: true
           labels: ${{ steps.meta.outputs.labels }}
-          tags: hendisantika/ecommerce:${{ github.run_number }}
+          tags: bangsis/movie-service:${{ github.run_number }}
           build-args: |
             GIT_VERSION_TAG=${{ env.RELEASE_VERSION }}
             GIT_COMMIT_MESSAGE=${{ github.event.head_commit.message }}
@@ -115,51 +111,14 @@ jobs:
           docker build . --tag $IMAGE_NAME:$TAG
           docker push $IMAGE_NAME:$TAG
 
-  push-to-ecr:
-    runs-on: ubuntu-latest
-    needs: project-build
-    env:
-      IMAGE_TAG: ${{ github.run_number }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - run: docker build -t ecommerce:$IMAGE_TAG -f Dockerfile .
-
-      - name: Push to ECR
-        env:
-          ECR_REGISTRY: ${{ steps.login-pf-aws-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{vars.AWS_ECR_REPO}}
-          IMAGE_TAG: ${{ github.run_number }}
-        id: ecr
-        uses: jwalton/gh-ecr-push@v2
-        with:
-          access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          secret-access-key: ${{ secrets.AWS_ACCESS_SECRET_KEY }}
-          region: ${{ vars.AWS_REGION }}
-          local-image: ecommerce:$IMAGE_TAG
-          image: ecommerce:$IMAGE_TAG
-
+#replace
   deploy:
-    needs: push-to-ecr
+    needs: push-to-docker-hub
     name: deploy image
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v5
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v5
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_ACCESS_SECRET_KEY }}
-          aws-region: ${{ vars.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-        with:
-          registry-type: private
 
       - name: Add Server key
         run: |
@@ -186,24 +145,15 @@ jobs:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_PORT: ${{ secrets.SERVER_PORT }}
           SERVER_USERNAME: ${{ secrets.SERVER_USERNAME }}
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ecommerce
           IMAGE_TAG: ${{ github.run_number }}
           CONTAINER_NAME: ecommerce
-          AWS_REGION: ${{ vars.AWS_REGION }}
-          AWS_ECR_REGISTRY: ${{ vars.AWS_ECR_REGISTRY }}
-          AWS_ECR_REPOSITORY: ${{ vars.AWS_ECR_REPO }}
           APP_PORT: ${{ vars.APP_PORT }}
           SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL }}
           SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
           SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
 
         run: |
-          echo AWS_REGION=$AWS_REGION >> .env
-          echo AWS_ECR_REGISTRY=$AWS_ECR_REGISTRY >> .env
-          echo AWS_ECR_REPOSITORY=$AWS_ECR_REPOSITORY >> .env
           echo CONTAINER_NAME=$CONTAINER_NAME >> .env
-          echo ECR_REPOSITORY=$ECR_REPOSITORY >> .env
           echo IMAGE_TAG=$IMAGE_TAG >> .env
           echo APP_ENV=github >> .env
           echo SPRING_ACTIVE_PROFILE=github >> .env
@@ -221,23 +171,20 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
           source: "./.env"  # Path to the file on your runner
-          target: "~/ecommerce"  # Target directory on the server
+          target: "~/movie-wawan"  # Target directory on the server
 
       - name: Run the application
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_PORT: ${{ secrets.SERVER_PORT }}
           SERVER_USERNAME: ${{ secrets.SERVER_USERNAME }}
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ecommerce
           IMAGE_TAG: ${{ github.run_number }}
           CONTAINER_NAME: ecommerce
-          AWS_REGION: ${{ vars.AWS_REGION }}
-          AWS_ECR_REPOSITORY: ${{ vars.AWS_ECR_REPO }}
-          AWS_ECR_REGISTRY: ${{ secrets.AWS_ECR_REGISTRY }}
           SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL }}
           SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
           SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
         run: |
           set -e
           ./deploy.sh
+
+#end replace
