@@ -1,11 +1,11 @@
 #!/bin/bash
 ssh -p "${SERVER_PORT}" "${SERVER_USERNAME}"@"${SERVER_HOST}" -i key.txt -t -t -o StrictHostKeyChecking=no << 'ENDSSH'
-cd ~/ecommerce
+cd ~/ecommerce_yahya
 cat .env
 set +a
 source .env
 start=$(date +"%s")
-echo $DOCKERHUB_TOKEN | docker login --username $DOCKERHUB_USERNAME --password $DOCKERHUB_TOKEN
+echo $DOCKERHUB_TOKEN | docker login --username $DOCKERHUB_USERNAME --password-stdin
 docker pull yahyaalamudin09/ecommerce:$IMAGE_TAG
 
 if [ "$(docker ps -qa -f name=$CONTAINER_NAME)" ]; then
