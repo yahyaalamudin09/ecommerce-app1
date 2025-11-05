@@ -5,7 +5,7 @@ cat .env
 set +a
 source .env
 start=$(date +"%s")
-echo $DOCKERHUB_TOKEN | docker login --username $DOCKERHUB_USERNAME --password-stdin
+echo $DOCKERHUB_TOKEN | docker login --username $DOCKERHUB_USERNAME --password $DOCKERHUB_TOKEN
 docker pull yahyaalamudin09/ecommerce:$IMAGE_TAG
 
 if [ "$(docker ps -qa -f name=$CONTAINER_NAME)" ]; then
